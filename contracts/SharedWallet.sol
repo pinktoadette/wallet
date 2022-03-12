@@ -21,30 +21,20 @@ import "hardhat/console.sol";
 contract SharedWallet {
     
     address public _owner;
-    mapping(address => uint8) private _owners;
     uint public totalFunds = 0 ether;
     uint256 private blockCreate;
 
     mapping(address => uint) public _walletBalances;
 
     modifier isOwner() {
-        require(msg.sender == _owner);
-        _;
-    }
-
-    modifier hasBalance(uint256 amount) {
-        require(address(this).balance >= amount);
-        _;
-    }
-
-    modifier validOwners() {
-        require(msg.sender == _owner || _owners[msg.sender] == 1);
+        require(msg.sender == _owner, "Not the owner");
         _;
     }
 
     event DepositFunds(address from, uint amount);
     event WithdrawFunds(address from, uint amount);
-    event ViewBlocks(uint256 blocks);
+    event ViewBlocks(uint blocks);
+    event ViewCurrentBlock(uint block);
 
     constructor() {
         _owner = msg.sender;
@@ -53,19 +43,10 @@ contract SharedWallet {
 
     receive() external payable {
         _walletBalances[msg.sender] += msg.value;
-        emit DepositFunds(msg.sender, msg.value);
     }
 
     function totalSupply() public view returns (uint256) {
         return totalFunds;
-    }
-
-     function addOwner(address owner)  isOwner public {
-        _owners[owner] = 1;
-    }
-
-    function removeOwner(address owner) isOwner public {
-        _owners[owner] = 0;   
     }
 
     function balanceOf(address account) public view returns (uint256) {
@@ -74,29 +55,33 @@ contract SharedWallet {
 
     function deposit() payable public {
          assert(_walletBalances[msg.sender] + msg.value >= _walletBalances[msg.sender]);
-         totalFunds += _walletBalances[msg.sender];
+         totalFunds += msg.value;
+         _walletBalances[msg.sender] += msg.value;
          emit DepositFunds(msg.sender, msg.value);
-         emit ViewBlocks(blockCreate);
+         emit ViewCurrentBlock(block.number);
      }
 
-    function withdraw(uint amount) validOwners public {
-        require(blockCreate + 2  < block.number, "Required blocks not satisfied" );
-        require(address(this).balance >= amount);
-        payable(_owner).transfer(amount);
+    function withdraw(uint amount) isOwner public {
+        require(blockCreate + 2  < block.number, "Block not satisfied" );
+        require(address(this).balance >= amount, "Not enough funds");
+        _walletBalances[msg.sender] -= amount;
         totalFunds -= amount;
+        payable(_owner).transfer(amount);
         emit WithdrawFunds(msg.sender, amount);
         emit ViewBlocks(blockCreate);
     }
 
-    function emergencyWithdrawAllFunds() validOwners public {
-        require(blockCreate + 2  < block.number, "Required blocks not satisfied" );
-        require(address(this).balance > _walletBalances[msg.sender]);
-        payable(_owner).transfer(address(this).balance);
+    function emergencyWithdrawAllFunds() isOwner public {
+        require(blockCreate + 2  < block.number, "Block not satisfied" );
+        require(_walletBalances[msg.sender] > 0);
+        payable(_owner).transfer(_walletBalances[msg.sender]);
+        totalFunds -= _walletBalances[msg.sender];
+        _walletBalances[msg.sender] = 0;
         emit WithdrawFunds(msg.sender, _walletBalances[msg.sender]);
-         emit ViewBlocks(blockCreate);
+        emit ViewBlocks(blockCreate);
     }
 
-    function viewBlock() public view returns (uint256) {
+    function viewBlock() public view returns (uint) {
         return blockCreate;
     }
 

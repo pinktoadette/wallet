@@ -5,20 +5,16 @@ const hre = require("hardhat");
 describe("SharedWallet", function () {
 
     let wallet, addr1, addr2;
-
-    beforeEach(async function () {
-        await hre.network.provider.send("hardhat_reset")
-    })
-
     before(async function () {
         console.log('getContractFactory wallet...');
         const SharedWallet = await hre.ethers.getContractFactory('SharedWallet');
         console.log('Deploying wallet.');
-        wallet = await SharedWallet.deploy();
-        const events = await wallet.deployed();
-        console.log('Deployed wallet.', wallet.address);        
+        wallet = SharedWallet.attach("0x5FbDB2315678afecb367f032d93F642f64180aa3")
+        // wallet = await SharedWallet.deploy();
+        // const events = await wallet.deployed();
+        // console.log('Deployed wallet.', wallet.address);        
         [addr1, addr2 ] = await hre.ethers.getSigners();
-        console.log(events.events?.filter((x) => {return x.event == "ViewBlocks"}) );
+        // console.log(events.events?.filter((x) => {return x.event == "ViewBlocks"}) );
     });
 
     it('Should assign balance to right owner', async () => {

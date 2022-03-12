@@ -32,6 +32,11 @@ module.exports = {
   networks: {
     hardhat: {
     },
+    localhost: {
+      host: "127.0.0.1",     // Localhost (default: none)
+      port: 8545,            // Standard Ethereum port 
+      network_id: "*",       // Any network (default: none)
+    },
     matic: {
       url: `https://rpc-mumbai.maticvigil.com`,
       accounts: [PRIVATE_KEY1, PRIVATE_KEY2],
