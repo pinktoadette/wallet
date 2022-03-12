@@ -1,6 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-ethers");
-const { PRIVATE_KEY1, PRIVATE_KEY2 } = require("./.secrets.json");
+const { TEST_NET_PRIVATE_KEY1, TEST_NET_PRIVATE_KEY2, TEST_NET_PRIVATE_KEY3 } = require("./.secrets.json");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -16,6 +16,10 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // Go to https://hardhat.org/config/ to learn more
 
 /**
+ * npx hardhat compile
+ * npx hardhat test
+ * npx hardhat run scripts/wallet-script.js --network localhost
+ * 
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
@@ -39,9 +43,7 @@ module.exports = {
     },
     matic: {
       url: `https://rpc-mumbai.maticvigil.com`,
-      accounts: [PRIVATE_KEY1, PRIVATE_KEY2],
-      gasLimit: 20000000,
-      gasPrice: 25000000000,
+      accounts: [TEST_NET_PRIVATE_KEY1]
     }
   },
   paths: {

@@ -1,4 +1,4 @@
 const ethers = require('ethers');
-let mnemonic = "warm isolate pulp drama genius squirrel track fatal orient then junk library";
+let mnemonic = "park review menu claim dragon rich limit vapor figure walnut wolf session";
 let mnemonicWallet = ethers.Wallet.fromMnemonic(mnemonic);
-console.log(mnemonicWallet.address)
+console.log(mnemonicWallet.privateKey)

@@ -41,8 +41,27 @@ contract SharedWallet {
         blockCreate = block.number;
     }
 
-    receive() external payable {
+    modifier isUsers() {
+        require(msg.sender == _owner || _walletBalances[msg.sender] >= 0, "Is not in users");
+        _;
+    }
+
+    fallback () external payable {
         _walletBalances[msg.sender] += msg.value;
+    }
+
+    receive() external payable {}
+
+    function addUser(address user) 
+        isOwner 
+        public {
+        _walletBalances[user] = 1;
+    }
+
+    function removeOwner(address user)
+        isOwner
+        public {
+        _walletBalances[user] = 0;   
     }
 
     function totalSupply() public view returns (uint256) {
@@ -53,17 +72,16 @@ contract SharedWallet {
         return _walletBalances[account];
     }
 
-    function deposit() payable public {
-         assert(_walletBalances[msg.sender] + msg.value >= _walletBalances[msg.sender]);
+    function deposit() public payable {
          totalFunds += msg.value;
          _walletBalances[msg.sender] += msg.value;
          emit DepositFunds(msg.sender, msg.value);
          emit ViewCurrentBlock(block.number);
      }
 
-    function withdraw(uint amount) isOwner public {
+    function withdraw(uint amount) isUsers public {
         require(blockCreate + 2  < block.number, "Block not satisfied" );
-        require(address(this).balance >= amount, "Not enough funds");
+        require(_walletBalances[msg.sender] > 0, "Not enough funds");
         _walletBalances[msg.sender] -= amount;
         totalFunds -= amount;
         payable(_owner).transfer(amount);
@@ -73,10 +91,9 @@ contract SharedWallet {
 
     function emergencyWithdrawAllFunds() isOwner public {
         require(blockCreate + 2  < block.number, "Block not satisfied" );
-        require(_walletBalances[msg.sender] > 0);
-        payable(_owner).transfer(_walletBalances[msg.sender]);
-        totalFunds -= _walletBalances[msg.sender];
-        _walletBalances[msg.sender] = 0;
+        require(address(this).balance > 0, "Nothing to withdraw");
+        payable(_owner).transfer(address(this).balance);
+        totalFunds -= address(this).balance;
         emit WithdrawFunds(msg.sender, _walletBalances[msg.sender]);
         emit ViewBlocks(blockCreate);
     }

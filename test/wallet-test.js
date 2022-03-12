@@ -1,65 +1,97 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const hre = require("hardhat");
+const assert = require('chai').assert;
+
 
 describe("SharedWallet", function () {
-
+    
     let wallet, addr1, addr2;
+    let contract = "";
+
     before(async function () {
         console.log('getContractFactory wallet...');
         const SharedWallet = await hre.ethers.getContractFactory('SharedWallet');
-        console.log('Deploying wallet.');
-        wallet = SharedWallet.attach("0x5FbDB2315678afecb367f032d93F642f64180aa3")
-        // wallet = await SharedWallet.deploy();
-        // const events = await wallet.deployed();
-        // console.log('Deployed wallet.', wallet.address);        
-        [addr1, addr2 ] = await hre.ethers.getSigners();
-        // console.log(events.events?.filter((x) => {return x.event == "ViewBlocks"}) );
+        if (!!contract) {
+            // if have contract address
+            console.log('Attaching contract', contract)
+            wallet = SharedWallet.attach(contract);
+        } else {
+            console.log('Deploying wallet...');
+           const sh = await SharedWallet.deploy();
+            wallet = await sh.deployed();
+            console.log('Deployed wallet.', wallet.address);    
+        }
+        [owner, addr1, addr2 ] = await hre.ethers.getSigners();
+        console.log("owner", owner.address)
     });
 
-    it('Should assign balance to right owner', async () => {
-        const ownerBalance = await wallet.balanceOf(wallet.address);
-        const balance = await ethers.provider.getBalance(wallet.address);
-        expect(balance).to.equal(ownerBalance);
-    });
+    describe("Check owner", function () {
+        it('Should contract belongs to owner', async () => {
+            const user1 = await wallet.addUser(owner.address);
+            expect(user1.from).to.equal(owner.address);
+        });
+    })
 
-    it('Should addr1 deposit 20000000000 to contract', async () => {
-        const deposit = await wallet.deposit({from: addr1.address, value: 20000000000 });
-        await deposit.wait();
-        const balance = await ethers.provider.getBalance(wallet.address);
+    describe("Add user", function () {
+        it('Should add new addr1 in wallet', async () => {
+            const user1 = await wallet.addUser(addr1.address);
+            expect(user1.from).to.equal(owner.address);
+        });
+    })
 
-        expect(deposit.value).to.be.not.undefined;
-        expect(deposit.value).to.be.not.null;
-        expect(deposit.value.toNumber()).to.equal(20000000000);
-        expect(balance).to.equal(20000000000);
-    });
+    // describe("Test invalid transactions", function() {
+    //     it("Should throw error with only 1 block", function() {
+    //         return wallet.connect(addr1).withdraw(50000)
+    //              .then(assert.fail)
+    //              .catch(function(error) {
+    //                     assert.include(
+    //                         error.message,
+    //                         'Block not satisfied',
+    //                         'OK'
+    //                     )
+    //              });
+    //     });
 
-    it('Should addr1 deposit 100000000 to contract', async () => {
-        const deposit = await wallet.deposit({from: addr1.address, value: 100000000 });
-        const events = await deposit.wait();
-        // console.log(events.events?.filter((x) => {return x.event == "ViewBlocks"}) );
+    //     it("Should addr2 withdraw 100000 with no deposit", function() {
+    //         return wallet.connect(addr2).withdraw(100000)
+    //              .then(assert.fail)
+    //              .catch(function(error) {
+    //                     assert.include(
+    //                         error.message,
+    //                         'Not enough funds',
+    //                         'OK'
+    //                     )
+    //              });
+    //     });
+    // })
 
-        const balance = await ethers.provider.getBalance(wallet.address);
-        console.log("balance after deposit", balance)
-        expect(deposit.value).to.be.not.undefined;
-        expect(deposit.value).to.be.not.null;
-        expect(deposit.value.toNumber()).to.equal(100000000);
-    });
+    describe("Valid Transactions", function () {
+        it('Should addr1 deposit 20000000000 to contract', async () => {
+            const deposit = await wallet.connect(addr1).deposit({from: addr1.address, value: 20000000000 });
+            await deposit.wait();
+            const balance = await wallet.balanceOf(addr1.address);
+            expect(deposit.value).to.be.not.undefined;
+            expect(deposit.value).to.be.not.null;
+            expect(deposit.value.toNumber()).to.equal(20000000000);
+            expect(balance).to.equal(20000000000);
+        });
 
-    it('Should addr1 withdraw 50000000 from contract', async () => {
-        const begin_balance = await ethers.provider.getBalance(wallet.address);
-        console.log("begin balance", begin_balance)
+        it('Should addr2 deposit 40000 to contract', async () => {
+            const deposit = await wallet.connect(addr2).deposit({from: addr2.address, value: 40000 });
+            await deposit.wait();
+            expect(deposit.value).to.be.not.undefined;
+            expect(deposit.value).to.be.not.null;
+            expect(deposit.value.toNumber()).to.equal(40000);
+        });
 
-        const withdraw = await wallet.withdraw(50000000, {from: addr1.address, value: 50000000 });
-        const events = await withdraw.wait();
-        console.log(events.events?.filter((x) => {return x.event == "WithdrawFunds"}) );
-
-        const end_balance = await ethers.provider.getBalance(wallet.address);
-        console.log(end_balance, begin_balance)
-        expect(begin_balance - end_balance).to.equal(50000000);
-    });
-
-    // test addr2 withdrawing from this wallet
+        it('Should owner withdraw all totalSupply', async () => {
+            await wallet.emergencyWithdrawAllFunds();
+            const totalSupply = await wallet.totalSupply();
+            console.log(totalSupply)
+            expect(totalSupply).to.equal(0);
+        });
+    })
 
   });
   
