@@ -43,7 +43,7 @@ module.exports = {
     },
     matic: {
       url: `https://rpc-mumbai.maticvigil.com`,
-      accounts: [TEST_NET_PRIVATE_KEY1]
+      accounts: [TEST_NET_PRIVATE_KEY1, TEST_NET_PRIVATE_KEY2, TEST_NET_PRIVATE_KEY3]
     }
   },
   paths: {
