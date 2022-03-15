@@ -3,11 +3,12 @@ const { ethers } = require("hardhat");
 const hre = require("hardhat");
 const assert = require('chai').assert;
 
+// npx hardhat run scripts/deploy.js --network localhost
 // npx hardhat console --network localhost
 describe("Wallet", function () {
     
     let wallet, addr1, addr2;
-    let contract = "0x0B306BF915C4d645ff596e518fAf3F9669b97016";
+    let contract = "0x0FBad4BBd23e89206317F95C2A9F2c11F5Ac3853";
 
     before(async function () {
         const Wallet = await hre.ethers.getContractFactory('Wallet');
@@ -23,44 +24,45 @@ describe("Wallet", function () {
         [owner, addr1, addr2 ] = await hre.ethers.getSigners();
     });
 
-    describe("Add user", function () {
-        it('Should add new addr1 in wallet', async () => {           
-            const user1 = await wallet.addUser(addr1.address);
-            expect(user1.from).to.equal(owner.address);
-        });
-    })
-
-    describe("Test invalid transactions", function() {
-        it('Test should throw error if request not found', async function() {
-            const withdraw = await wallet.connect(addr1).withdraw(50000)
-            expect(withdraw.value.toNumber()).to.equal(0);
-        });
-    })
-
     describe("Valid Transactions", function () {
-        it('Should addr1 deposit 20000000000 to contract', async () => {
-            const deposit = await wallet.connect(addr1).deposit({from: addr1.address, value: 20000000000 });
-            await deposit.wait();
-            expect(deposit.value).to.be.not.undefined;
-            expect(deposit.value).to.be.not.null;
-            expect(deposit.value.toNumber()).to.equal(20000000000);
+        const depositAddr1 = 2e9, depositAddr2 = 1e9;
+
+        it('Should addr1 withdraw without ever despositing', async function() {
+            await expect(wallet.connect(addr1).withdraw(50000)).to.be.revertedWith('Is not in users');
         });
 
-        it('Should addr2 deposit 40000 to contract', async () => {
-            await wallet.addUser(addr2.address);
-            const deposit = await wallet.connect(addr2).deposit({from: addr2.address, value: 40000 });
+        it(`Should addr1 deposit ${depositAddr1} to contract`, async () => {
+            const deposit = await wallet.connect(addr1).deposit({from: addr1.address, value: depositAddr1});
             await deposit.wait();
             expect(deposit.value).to.be.not.undefined;
             expect(deposit.value).to.be.not.null;
-            expect(deposit.value.toNumber()).to.equal(40000);
+            expect(deposit.value.toNumber()).to.equal(depositAddr1);
+        });
+
+        it(`Should addr1 withdraw before required number of blocks`, async function() {
+            await expect(wallet.connect(addr1).withdraw(depositAddr1)).to.be.revertedWith('Block not satisfied');
+        });
+
+        it(`Should addr2 deposit ${depositAddr2} to contract`, async () => {
+            const deposit = await wallet.connect(addr2).deposit({from: addr2.address, value: depositAddr2 });
+            await deposit.wait();
+            expect(deposit.value).to.be.not.undefined;
+            expect(deposit.value).to.be.not.null;
+            expect(deposit.value.toNumber()).to.equal(depositAddr2);
+        });
+
+        it(`Should addr1 withdraw more than deposit amt of ${depositAddr1}`, async function() {
+            await expect(wallet.connect(addr1).withdraw(depositAddr1*1.1)).to.be.revertedWith('Nothing to withdraw');
         });
 
         it('Should owner withdraw all totalSupply', async () => {
-            const withdrawAll = await wallet.emergencyWithdrawAllFunds();
-            const ownerBal = await wallet.balanceOf(owner.address);
-            const walletBal = await wallet.balanceOf(wallet.address);
-            expect(ownerBal.value).to.equal(0);
-            expect(walletBal.value).to.equal(0);
+            const withdrawAll = await wallet.withdrawAllFunds();
+            const totalFunds = await wallet.totalSupply();
+            expect(totalFunds.value).to.equal(0);
+        });
+
+        it('Should addr1 withdraw after owner withdraw all', async function() {
+            await expect(wallet.connect(addr2).withdraw(depositAddr2)).to.be.revertedWith('Nothing to withdraw');
         });
     })
 

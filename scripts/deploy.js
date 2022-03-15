@@ -14,7 +14,7 @@ async function main() {
   // await hre.run('compile');
 
   // We get the contract to deploy
-  const SharedWallet = await hre.ethers.getContractFactory("SharedWallet");
+  const SharedWallet = await hre.ethers.getContractFactory("Wallet");
   const wallet = await SharedWallet.deploy();
 
   await wallet.deployed();

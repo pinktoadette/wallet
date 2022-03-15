@@ -6,7 +6,6 @@ contract Wallet {
     address public _owner;
     uint public totalFunds = 0 ether;
     uint256 public _blockCreate;
-    bool public _isEmpty;
 
     mapping(address => uint) public _walletBalances;
     mapping(address => bool) public _users;
@@ -23,6 +22,7 @@ contract Wallet {
 
     constructor() {
         _owner = msg.sender;
+        _users[msg.sender];
         _blockCreate = block.number;
     }
 
@@ -38,7 +38,6 @@ contract Wallet {
     receive() external payable {}
 
     function addUser(address user) 
-        isOwner 
         public {
         _users[user] = true;
     }
@@ -53,39 +52,41 @@ contract Wallet {
         return totalFunds;
     }
 
-
-    function balanceOf(address account) public returns (uint256) {
-        // avoid for loops when owner withdraw all
-        if (_isEmpty) { 
-            _walletBalances[account] = 0;
-        }
+    function balanceOf(address account) public view returns (uint256) {
         return _walletBalances[account];
     }
 
     function deposit() public payable {
-         totalFunds += msg.value;
-         _walletBalances[msg.sender] += msg.value;
-         _isEmpty = false;
-         emit DepositFunds(msg.sender, msg.value);
-         emit ViewCurrentBlock(block.number);
+        require(msg.value > 0, "Nothing to deposit");
+        addUser(msg.sender);
+        payable(address(this)).transfer(msg.value);
+        totalFunds += msg.value;
+        _walletBalances[msg.sender] += msg.value;
+        emit DepositFunds(msg.sender, msg.value);
+        emit ViewCurrentBlock(block.number);
      }
 
     function withdraw(uint amount) isUsers public {
         require(_blockCreate + 2  < block.number, "Block not satisfied" );
-        require(_walletBalances[msg.sender] > 0, "Not enough funds");
+        require(_walletBalances[msg.sender] <= amount, "Insufficient funds");
+        if (totalFunds==0) {
+            // avoid for loops, assign if owner becomes bad actor
+            // user should still be able to withdraw, if someone else deposits
+            _walletBalances[msg.sender] = 0; 
+        }
+        require(_walletBalances[msg.sender] > 0, "Nothing to withdraw");
+        payable(_owner).transfer(amount);
         _walletBalances[msg.sender] -= amount;
         totalFunds -= amount;
-        payable(_owner).transfer(amount);
         emit WithdrawFunds(msg.sender, amount);
         emit ViewBlocks(_blockCreate);
     }
 
-    function emergencyWithdrawAllFunds() isOwner public {
+    function withdrawAllFunds() isOwner public {
         require(_blockCreate + 2  < block.number, "Block not satisfied" );
         require(address(this).balance > 0, "Nothing to withdraw");
         payable(_owner).transfer(totalFunds);
         totalFunds -= totalFunds;
-        _isEmpty = true;
         emit WithdrawFunds(msg.sender, _walletBalances[msg.sender]);
         emit ViewBlocks(_blockCreate);
     }

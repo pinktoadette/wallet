@@ -37,13 +37,15 @@ module.exports = {
     hardhat: {
     },
     localhost: {
-      host: "127.0.0.1",     // Localhost (default: none)
-      port: 8545,            // Standard Ethereum port 
-      network_id: "*",       // Any network (default: none)
+      host: "127.0.0.1",     
+      port: 8545,            
+      network_id: "*",       
     },
     matic: {
       url: `https://rpc-mumbai.maticvigil.com`,
-      accounts: [TEST_NET_PRIVATE_KEY1, TEST_NET_PRIVATE_KEY2, TEST_NET_PRIVATE_KEY3]
+      accounts: [TEST_NET_PRIVATE_KEY1, TEST_NET_PRIVATE_KEY2, TEST_NET_PRIVATE_KEY3],
+      gasPrice: 50000000000,
+      gasLimit: 50000000000
     }
   },
   paths: {
